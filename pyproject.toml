@@ -28,6 +28,10 @@ exclude = [
 anamnesisai = ">=0.2.1"
 rago = ">=0.13.0"
 pypdf = ">=5.4.0"
+sqlalchemy = "^2.0.41"
+atpublic = ">=6"
+sqlmodel = ">=0.0.24"
+questionary = "^2.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.3.2"
