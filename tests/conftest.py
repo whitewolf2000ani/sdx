@@ -15,7 +15,7 @@ from dotenv import dotenv_values, load_dotenv
 @pytest.fixture
 def env() -> dict[str, str | None]:
     """Return a fixture for the environment variables from .env file."""
-    dotenv_path = Path(__file__).parent / '.env'
+    dotenv_path = Path(__file__).parents[1] / '.envs' / '.env'
     if not dotenv_path.exists():
         warnings.warn(
             f"'.env' file not found at {dotenv_path}. Some "
@@ -34,12 +34,21 @@ def test_data_dir() -> Path:
 
 
 @pytest.fixture
-def reports_data_dir(test_data_dir: Path) -> Path:
-    """Fixture providing the path to the test reports directory."""
-    reports_dir = test_data_dir / 'reports'
-    if not reports_dir.exists():
-        reports_dir.mkdir(parents=True, exist_ok=True)
-    return reports_dir
+def reports_pdf_dir(test_data_dir: Path) -> Path:
+    """Fixture for the directory containing PDF report files."""
+    pdf_dir = test_data_dir / 'reports' / 'pdf_reports'
+    if not pdf_dir.exists():
+        pdf_dir.mkdir(parents=True, exist_ok=True)
+    return pdf_dir
+
+
+@pytest.fixture
+def reports_image_dir(test_data_dir: Path) -> Path:
+    """Fixture for the directory containing image report files."""
+    image_dir = test_data_dir / 'reports' / 'image_reports'
+    if not image_dir.exists():
+        image_dir.mkdir(parents=True, exist_ok=True)
+    return image_dir
 
 
 @pytest.fixture
