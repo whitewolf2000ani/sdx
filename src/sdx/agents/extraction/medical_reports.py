@@ -24,12 +24,14 @@ def extract_text_from_image(image_path: Union[str, Path]) -> str:
         img = Image.open(image_path)
         text = pytesseract.image_to_string(img)
         if not text.strip():
-            raise ValueError(f'No extractable text found in image: {image_path}')
-        return text
+            raise ValueError(
+                f'No extractable text found in image: {image_path}'
+            )
+        return str(text)
     except Exception as e:
         raise ValueError(f'Error reading image {image_path}: {e!s}') from e
-    
-    
+
+
 def extract_text_from_pdf(pdf_path: Union[str, Path]) -> str:
     """Extract text content from a PDF file."""
     pdf_path = Path(pdf_path)
