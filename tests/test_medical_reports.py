@@ -32,10 +32,11 @@ def test_extract_text_nonexistent_file():
         extract_text_from_pdf('nonexistent_file.pdf')
 
 
+@pytest.mark.skipif(
+    not os.environ.get('OPENAI_API_KEY'), reason='OpenAI API key not available'
+)
 def test_get_report_data_from_pdf(reports_pdf_dir, api_key_openai):
     """Test FHIR data extraction from PDF."""
-    if not os.environ.get('OPENAI_API_KEY'):
-        pytest.skip('OpenAI API key not available')
     test_files = list(reports_pdf_dir.glob('*.pdf'))
     if not test_files:
         pytest.skip('No test PDF files available in the reports directory')
@@ -82,10 +83,11 @@ def test_extract_text_nonexistent_image():
         extract_text_from_image('nonexistent_file.png')
 
 
+@pytest.mark.skipif(
+    not os.environ.get('OPENAI_API_KEY'), reason='OpenAI API key not available'
+)
 def test_get_report_data_from_image(reports_image_dir, api_key_openai):
     """Test FHIR data extraction from image."""
-    if not os.environ.get('OPENAI_API_KEY'):
-        pytest.skip('OpenAI API key not available')
     test_files = (
         list(reports_image_dir.glob('*.png'))
         + list(reports_image_dir.glob('*.jpg'))
