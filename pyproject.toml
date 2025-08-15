@@ -1,6 +1,6 @@
 [project]
 name = "sdx"
-version = "0.1.0"  # semantic-release
+version = "0.2.0"  # semantic-release
 description = "This Project aims to ..."
 readme = "README.md"
 authors = [
