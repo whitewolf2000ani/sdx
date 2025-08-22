@@ -13,6 +13,7 @@ import pytest
 
 from dotenv import dotenv_values, load_dotenv
 from fastapi.testclient import TestClient
+from sdx.agents.extraction.medical_reports import MedicalReportFileExtractor
 from sdx.agents.extraction.wearable import WearableDataFileExtractor
 
 from research.app.main import app
@@ -107,3 +108,9 @@ def client():
 def wearable_extractor():
     """Wearable data extractor fixture."""
     return WearableDataFileExtractor()
+
+
+@pytest.fixture
+def medical_extractor():
+    """Medical report extractor fixture."""
+    return MedicalReportFileExtractor()

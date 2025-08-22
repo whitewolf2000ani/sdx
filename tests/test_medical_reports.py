@@ -1,115 +1,111 @@
-"""Tests for the medical_reports module."""
+"""Test the extraction of medical report data."""
 
+import io
 import os
+
+from pathlib import Path
 
 import pytest
 
 from sdx.agents.extraction.medical_reports import (
-    extract_text_from_image,
-    extract_text_from_pdf,
-    get_report_data_from_image,
-    get_report_data_from_pdf,
+    MedicalReportExtractorError,
+    MedicalReportFileExtractor,
+    TextExtractionError,
 )
 
-
-def test_extract_text_from_pdf(reports_pdf_dir):
-    """Test PDF text extraction functionality."""
-    test_files = list(reports_pdf_dir.glob('*.pdf'))
-    if not test_files:
-        pytest.skip('No test PDF files available in the reports directory')
-
-    for pdf_path in test_files:
-        text = extract_text_from_pdf(pdf_path)
-        assert isinstance(text, str)
-        assert len(text) > 0, (
-            f'Extracted text from {pdf_path} should not be empty'
-        )
+TEST_DATA_PATH = Path(__file__).parent / 'data' / 'reports'
+PDF_FILE = TEST_DATA_PATH / 'pdf_reports' / 'report-1.pdf'
+IMAGE_FILE = TEST_DATA_PATH / 'image_reports' / 'image-1.png'
+UNSUPPORTED_FILE = TEST_DATA_PATH / 'pdf_reports' / 'unsupported_file.txt'
+CORRUPT_PDF_FILE = TEST_DATA_PATH / 'pdf_reports' / 'corrupt_report.txt'
 
 
-def test_extract_text_nonexistent_file():
-    """Test error handling for non-existent PDF files."""
-    with pytest.raises(FileNotFoundError):
-        extract_text_from_pdf('nonexistent_file.pdf')
+@pytest.fixture
+def extractor():
+    """Return a MedicalReportFileExtractor instance for testing."""
+    return MedicalReportFileExtractor()
+
+
+def test_only_supported_files_can_be_extracted(extractor):
+    """Test that only supported files can be validated successfully."""
+    extractor._validate_or_raise(PDF_FILE)
+    extractor._validate_or_raise(IMAGE_FILE)
+    with pytest.raises(MedicalReportExtractorError):
+        extractor._validate_or_raise(UNSUPPORTED_FILE)
+
+
+def test_extract_text_from_pdf_file(extractor):
+    """Test text extraction from PDF files returns valid string."""
+    text = extractor._extract_text_from_pdf(PDF_FILE)
+    assert isinstance(text, str)
+    assert len(text) > 0
+
+
+def test_extract_text_from_image_file(extractor):
+    """Test text extraction from image files using OCR."""
+    text = extractor._extract_text_from_image(IMAGE_FILE)
+    assert isinstance(text, str)
+    assert len(text) > 0
+
+
+def test_extract_unsupported_file_raises(extractor):
+    """Test that unsupported file types raise appropriate errors."""
+    with pytest.raises(MedicalReportExtractorError):
+        extractor._validate_or_raise(UNSUPPORTED_FILE)
+
+
+def test_extract_corrupt_pdf_raises(extractor):
+    """Test that corrupt PDF files raise TextExtractionError."""
+    with pytest.raises(TextExtractionError):
+        extractor._extract_text_from_pdf(CORRUPT_PDF_FILE)
 
 
 @pytest.mark.skipif(
     not os.environ.get('OPENAI_API_KEY'), reason='OpenAI API key not available'
 )
-def test_get_report_data_from_pdf(reports_pdf_dir, api_key_openai):
-    """Test FHIR data extraction from PDF."""
-    test_files = list(reports_pdf_dir.glob('*.pdf'))
-    if not test_files:
-        pytest.skip('No test PDF files available in the reports directory')
-    for pdf_path in test_files:
-        fhir_data = get_report_data_from_pdf(pdf_path, api_key=api_key_openai)
-        assert isinstance(fhir_data, dict)
-        assert len(fhir_data) > 0, (
-            f'No FHIR resources was extracted form {pdf_path}'
-        )
-
-        # Common FHIR resource types include Patient, Condition, Observation.
-        expected_resource_types = {
-            'Patient',
-            'Condition',
-            'Observation',
-            'DiagnosticReport',
-        }
-        assert any(
-            resource_type in fhir_data
-            for resource_type in expected_resource_types
-        ), f'No expected FHIR resource types found in {pdf_path}'
-
-
-def test_extract_text_from_image(reports_image_dir):
-    """Test image text extraction functionality."""
-    test_files = (
-        list(reports_image_dir.glob('*.png'))
-        + list(reports_image_dir.glob('*.jpg'))
-        + list(reports_image_dir.glob('*.jpeg'))
-    )
-    if not test_files:
-        pytest.skip('No test image files available in the reports directory')
-    for image_path in test_files:
-        text = extract_text_from_image(image_path)
-        assert isinstance(text, str)
-        assert len(text) > 0, (
-            f'Extracted text from {image_path} should not be empty'
-        )
-
-
-def test_extract_text_nonexistent_image():
-    """Test error handling for non-existent image files."""
-    with pytest.raises(FileNotFoundError):
-        extract_text_from_image('nonexistent_file.png')
+def test_extract_report_data_from_pdf_file(extractor):
+    """Test FHIR data extraction from PDF files."""
+    api_key = os.environ.get('OPENAI_API_KEY')  # use environment key
+    fhir_data = extractor.extract_report_data(PDF_FILE, api_key)
+    assert isinstance(fhir_data, dict)
+    assert len(fhir_data) > 0
+    expected_keys = {'Patient', 'Condition', 'Observation', 'DiagnosticReport'}
+    assert any(key in fhir_data for key in expected_keys)
 
 
 @pytest.mark.skipif(
     not os.environ.get('OPENAI_API_KEY'), reason='OpenAI API key not available'
 )
-def test_get_report_data_from_image(reports_image_dir, api_key_openai):
-    """Test FHIR data extraction from image."""
-    test_files = (
-        list(reports_image_dir.glob('*.png'))
-        + list(reports_image_dir.glob('*.jpg'))
-        + list(reports_image_dir.glob('*.jpeg'))
-    )
-    if not test_files:
-        pytest.skip('No test image files available in the reports directory')
-    for pdf_path in test_files:
-        fhir_data = get_report_data_from_image(
-            pdf_path, api_key=api_key_openai
-        )
-        assert isinstance(fhir_data, dict)
-        assert len(fhir_data) > 0, (
-            f'No FHIR resources was extracted {pdf_path}'
-        )
-        expected_resource_types = {
-            'Patient',
-            'Condition',
-            'Observation',
-            'DiagnosticReport',
-        }
-        assert any(
-            resource_type in fhir_data
-            for resource_type in expected_resource_types
-        ), f'No expected FHIR resource types found in {pdf_path}'
+def test_extract_report_data_from_image_file(extractor):
+    """Test FHIR data extraction from image files."""
+    api_key = os.environ.get('OPENAI_API_KEY')  # use environment key
+    fhir_data = extractor.extract_report_data(IMAGE_FILE, api_key)
+    assert isinstance(fhir_data, dict)
+    assert len(fhir_data) > 0
+    expected_keys = {'Patient', 'Condition', 'Observation', 'DiagnosticReport'}
+    assert any(key in fhir_data for key in expected_keys)
+
+
+def test_support_inmemory_pdf(extractor):
+    """Test text extraction from in-memory PDF BytesIO objects."""
+    with open(PDF_FILE, 'rb') as f:
+        pdf_bytes = io.BytesIO(f.read())
+    text = extractor._extract_text_from_pdf(pdf_bytes)
+    assert isinstance(text, str)
+    assert len(text) > 0
+
+
+def test_support_inmemory_image(extractor):
+    """Test text extraction from in-memory image BytesIO objects."""
+    with open(IMAGE_FILE, 'rb') as f:
+        image_bytes = io.BytesIO(f.read())
+    text = extractor._extract_text_from_image(image_bytes)
+    assert isinstance(text, str)
+    assert len(text) > 0
+
+
+def test_empty_inmemory_file_raises(extractor):
+    """Test that empty in-memory streams raise FileNotFoundError."""
+    empty_stream = io.BytesIO(b'')
+    with pytest.raises(FileNotFoundError):
+        extractor._validate_or_raise(empty_stream)
